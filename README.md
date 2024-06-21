@@ -1,5 +1,7 @@
 # Workshop docker cicd
 
+![ci-flow](images/ci-flow.png)
+
 > [!IMPORTANT]  
 > **Goal:** Create CI/CD pipeline with Jenkins
 
@@ -11,7 +13,7 @@ Steps
 4. Create cd (Add deployment to pipeline)
 5. Checking results
 
-![diagram](images/diagram.png)
+![pipeline-flow](images/pipeline-flow.png)
 
 ---
 
@@ -68,6 +70,8 @@ Click `Add credential` button
 
 ## 3. Setup pipeline & create ci
 
+### 3.1 Pull code & create ci
+
 On first page click `+ New Item` menu
 
 Enter pipeline name for example `demo_pipeline`
@@ -114,76 +118,60 @@ pipeline {
         stage('Run api automate test') {
             steps {
                 sh 'docker compose build postman'
-                sh 'docker compose up postman'
+                sh 'docker compose up postman --abort-on-container-exit'
             }
         }
-        # stage('Push Docker Image to Docker Hub') {
-        #     steps {
-        #         withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-        #             sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
-        #             sh '''docker image tag my_json_server:1.0 $DOCKER_USER/my_json_server:$BUILD_NUMBER
-        #                     docker image push $DOCKER_USER/my_json_server:$BUILD_NUMBER'''
-        #         }        
-        #     }
-        # }     
     }
     post {
         always {
-            sh 'docker compose down json_server'
+            sh 'docker compose down json_server postman'
         }
     }
 }
 ```
 
+### 3.2 Push iamges to registry after CI success
+
+Add 'Push Docker Image to Docker Hub' stage after `stage('Run api automate test')`
+
+```sh
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                    sh '''docker image tag my_json_server:1.0 $DOCKER_USER/my_json_server:$BUILD_NUMBER
+                            docker image push $DOCKER_USER/my_json_server:$BUILD_NUMBER'''
+                }        
+            }
+        } 
+```
+
+Checking docker image in docker hub account
+
 ---
+
+## 4. Create cd (Add deployment to pipeline)
 
 ### 4.1 Add deployment to pipeline
 
 Add 'Deploy application' stage after `stage('Push Docker Image to Docker Hub')`
 
-```
+```sh
         stage('Deploy application') {
             steps {
-                withKubeConfig([credentialsId: 'kube_config']) {
-                    sh 'kubectl apply -f ./workshops/12_pipeline/deploy/service.yml'
-                    sh 'kubectl apply -f ./workshops/12_pipeline/deploy/ingress.yml'
-                    withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                        sh 'kubectl set image deployment/json-server-deployment json-server=$DOCKER_USER/my_json_server:$BUILD_NUMBER'
-                    }
-                } 
-            }
-        }
-        stage('Rollout status') {
-            steps {
-                withKubeConfig([credentialsId: 'kube_config']) {
-                    sh 'kubectl rollout status deployment/json-server-deployment --timeout=3m'
-                } 
+                withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh 'docker stop my_json_server_dev || true'
+                    sh 'docker rm my_json_server_dev || true
+                    sh 'docker run -p 3001:3000 --name my_json_server_dev -d $DOCKER_USER/my_json_server:$BUILD_NUMBER'
+                }
             }
         }
 ```
-Go to `http://localhost:8888`
 
-Check resources
-```
-kubectl get all
-```
+Go to `http://localhost:3001`
 
 ---
 
 ### 4.2 Polling git for trigger pipelines
+
 Go to the pipeline: Configure > Build Triggers > Poll SCM > input `* * * * *`
-
----
-
-### Blue Ocean - plugin
-
-Manage Jenkins > Plugins > Available plugins > search `blue ocean` > checked and install
-
----
-
-### Clean cluster
-
-Delete cluster
-```
-k3d cluster delete my-cluster
-```
