@@ -26,7 +26,7 @@ services:
       run demo.postman_collection.json
       -e environment.postman_environment.json
       -r cli,htmlextra --reporter-htmlextra-export reports/report.html
-      --env-var "HOST=host.docker.internal:3000"
+      --env-var "HOST=json_server:3000"
     volumes:
       - ./newman/reports:/etc/newman/reports
     depends_on:
