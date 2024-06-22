@@ -15,9 +15,5 @@ RUN ./mvnw install -DskipTests
 FROM eclipse-temurin:21-jre
 
 COPY --from=build /home/app/target/*.jar app.jar
-# COPY opentelemetry-javaagent.jar opentelemetry-javaagent.jar
-# ENTRYPOINT ["java", "-jar", "app.jar"]
-
-
 COPY opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 ENTRYPOINT ["java","-javaagent:opentelemetry-javaagent.jar", "-jar","app.jar"]

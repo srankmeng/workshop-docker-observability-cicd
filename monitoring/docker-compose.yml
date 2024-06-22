@@ -1,7 +1,16 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 3000:80
+    depends_on:
+      - user_api
+
   user_api:
     build:
-      context: ./user
+      context: ./user-api
       dockerfile: Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/user
@@ -36,9 +45,9 @@ services:
       timeout: 10s
       retries: 60
   
-  lgtm:
-    image: grafana/otel-lgtm:0.6.0
-    ports:
-      - '4317:4317'
-      - '4318:4318' 
-      - '3000:3000' # dashboard
+  # lgtm:
+  #   image: grafana/otel-lgtm:0.6.0
+  #   ports:
+  #     - '4317:4317'
+  #     - '4318:4318' 
+  #     - '3000:3000' # dashboard
