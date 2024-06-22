@@ -45,9 +45,9 @@ services:
       timeout: 10s
       retries: 60
   
-  # lgtm:
-  #   image: grafana/otel-lgtm:0.6.0
-  #   ports:
-  #     - '4317:4317'
-  #     - '4318:4318' 
-  #     - '3000:3000' # dashboard
+  lgtm:
+    image: grafana/otel-lgtm:0.6.0
+    ports:
+      - '4317:4317'
+      - '4318:4318' 
+      - '4000:3000' # dashboard
