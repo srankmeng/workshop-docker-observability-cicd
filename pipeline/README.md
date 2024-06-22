@@ -1,4 +1,4 @@
-# Workshop docker cicd
+# Docker: Pipeline
 
 ![ci-flow](images/ci-flow.png)
 
@@ -107,24 +107,32 @@ pipeline {
         }
         stage('Build images') {
             steps {
-                sh 'docker compose build json_server'
+                dir("pipeline") {
+                    sh 'docker compose build json_server'
+                }
             }
         }
         stage('Setup & Provisioning') {
             steps {
-                sh 'docker compose up json_server -d'
+                dir("pipeline") {
+                    sh 'docker compose up json_server -d'
+                }
             }
         }
         stage('Run api automate test') {
             steps {
-                sh 'docker compose build postman'
-                sh 'docker compose up postman --abort-on-container-exit'
+                dir("pipeline") {
+                    sh 'docker compose build postman'
+                    sh 'docker compose up postman --abort-on-container-exit'
+                }
             }
         }
     }
     post {
         always {
-            sh 'docker compose down json_server postman'
+            dir("pipeline") {
+                sh 'docker compose down json_server postman'
+            }
         }
     }
 }
@@ -138,9 +146,11 @@ Add 'Push Docker Image to Docker Hub' stage after `stage('Run api automate test'
         stage('Push Docker Image to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                    sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
-                    sh '''docker image tag my_json_server:1.0 $DOCKER_USER/my_json_server:$BUILD_NUMBER
+                    dir("pipeline") {
+                        sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                        sh '''docker image tag my_json_server:1.0 $DOCKER_USER/my_json_server:$BUILD_NUMBER
                             docker image push $DOCKER_USER/my_json_server:$BUILD_NUMBER'''
+                    }
                 }        
             }
         } 
@@ -160,9 +170,11 @@ Add 'Deploy application' stage after `stage('Push Docker Image to Docker Hub')`
         stage('Deploy application') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                    sh 'docker stop my_json_server_dev || true'
-                    sh 'docker rm my_json_server_dev || true
-                    sh 'docker run -p 3001:3000 --name my_json_server_dev -d $DOCKER_USER/my_json_server:$BUILD_NUMBER'
+                    dir("pipeline") {
+                        sh 'docker stop my_json_server_dev || true'
+                        sh 'docker rm my_json_server_dev || true'
+                        sh 'docker run -p 3001:3000 --name my_json_server_dev -d $DOCKER_USER/my_json_server:$BUILD_NUMBER'
+                    }
                 }
             }
         }
