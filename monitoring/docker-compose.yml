@@ -60,8 +60,21 @@ services:
       - user_api
   
   lgtm:
-    image: grafana/otel-lgtm:0.6.0
+    # image: grafana/otel-lgtm:0.6.0
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
     ports:
       - '4317:4317'
       - '4318:4318' 
       - '4000:3000' # dashboard
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    ports:
+      - 9187:9187
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@db:5432/user?sslmode=disable"
+    depends_on :
+      db:
+        condition: service_healthy
