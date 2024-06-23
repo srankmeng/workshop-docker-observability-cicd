@@ -44,6 +44,20 @@ services:
       interval: 10s
       timeout: 10s
       retries: 60
+
+  postman:
+    build:
+      context: ./newman
+      dockerfile: Dockerfile
+    command: |
+      run demo.postman_collection.json
+      -e environment.postman_environment.json
+      -r cli,htmlextra --reporter-htmlextra-export reports/report.html
+      --env-var "HOST=host.docker.internal:8080"
+    volumes:
+      - ./newman/reports:/etc/newman/reports
+    depends_on:
+      - user_api
   
   lgtm:
     image: grafana/otel-lgtm:0.6.0
